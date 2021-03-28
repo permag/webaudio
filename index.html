@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="./audio.js" defer></script>
+  <title>Web Audio</title>
+  <style>
+    .controls {
+      display: grid;
+      grid-template-columns: auto min-content;
+      justify-content: center;
+      justify-items: stretch;
+      align-items: center;
+      gap: 6px 12px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+    fieldset {
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <fieldset>
+      <legend>Volume</legend>
+      <label for="volume">Vol</label>
+      <input type="range" min="0" max="1" value=".5" step=".01" id="volume">
+    </fieldset>
+    <fieldset>
+      <legend>EQ</legend>
+      <label for="bass">Bass</label>
+      <input type="range" min="-20" max="20" value="0" id="bass">
+      <label for="mid">Mid</label>
+      <input type="range" min="-20" max="20" value="0" id="mid">
+      <label for="treble">Treble</label>
+      <input type="range" min="-20" max="20" value="0" id="treble">
+    </fieldset>
+
+    <fieldset>
+      <legend>Compressor</legend>
+      <label for="compressor-threshold">Threshold</label>
+      <input type="range" min="0" max="100" value="0" id="compressor-threshold">
+      <label for="compressor-ratio">Ratio</label>
+      <input type="range" min="1" max="20" value="1" id="compressor-ratio">
+      <label for="compressor-attack">Attack</label>
+      <input type="range" min="0" max="1" value="0.15" step=".01" id="compressor-attack">
+      <label for="compressor-release">Release</label>
+      <input type="range" min="0" max="1" value="0.25" step=".01" id="compressor-release">
+    </fieldset>
+
+    <fieldset>
+      <legend>Delay</legend>
+      <label for="delay">Delay</label>
+      <input type="range" min="0" max="1" value="0" step=".01" id="delay">
+    </fieldset>
+
+    <fieldset>
+      <legend>Detune</legend>
+      <label for="detune">Detune</label>
+      <input type="range" min="-1000" max="1000" value="0" step="100" id="detune">
+    </fieldset>
+
+    <button id="song">Play song</button>
+  </div>
+  <canvas id="visualizer"></canvas>
+</body>
+</html>
