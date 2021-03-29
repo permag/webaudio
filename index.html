@@ -7,12 +7,14 @@
   <script src="./audio.js" defer></script>
   <title>Web Audio</title>
   <style>
+    body {
+      font-family: monospace;
+    }
     .controls {
       display: grid;
       grid-template-columns: auto min-content;
       justify-content: center;
       justify-items: stretch;
-      align-items: center;
       gap: 6px 12px;
     }
     canvas {
@@ -27,24 +29,54 @@
     fieldset {
       display: flex;
       flex-direction: column;
+      min-width: 250px;
+      border-radius: 9px;
+    }
+    fieldset:hover {
+      background-color: rgba(0, 0, 0, .04);
+    }
+    legend {
+      font-size: 16px;
+    }
+    .inputs {
+      display: grid;
+      flex-direction: column;
+    }
+    button {
+      transition: all .3s;
+    }
+    button.song {
+      background: none;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      text-align: left;
+      opacity: .75;
+      transform: scale(.95);
+    }
+    button.song:hover {
+      opacity: 1;
+    }
+    button.song.active {
+      opacity: 1;
+      transform: scale(1);
     }
   </style>
 </head>
 <body>
   <div class="controls">
     <fieldset>
-      <legend>Volume</legend>
-      <label for="volume">Vol</label>
-      <input type="range" min="0" max="1" value=".5" step=".01" id="volume">
-    </fieldset>
-    <fieldset>
       <legend>EQ</legend>
+      <label for="high-pass">High pass</label>
+      <input type="range" min="0" max="22050" value="0" range="5" id="high-pass">
       <label for="bass">Bass</label>
       <input type="range" min="-20" max="20" value="0" id="bass">
       <label for="mid">Mid</label>
       <input type="range" min="-20" max="20" value="0" id="mid">
       <label for="treble">Treble</label>
       <input type="range" min="-20" max="20" value="0" id="treble">
+      <label for="low-pass">Low pass</label>
+      <input type="range" min="-22050" max="0" value="-22050" range="5" id="low-pass">
     </fieldset>
 
     <fieldset>
@@ -66,12 +98,27 @@
     </fieldset>
 
     <fieldset>
-      <legend>Detune</legend>
+      <legend>Pitch</legend>
       <label for="detune">Detune</label>
       <input type="range" min="-1000" max="1000" value="0" step="100" id="detune">
     </fieldset>
-
-    <button id="song">Play song</button>
+    <fieldset>
+      <legend>I/O</legend>
+      <label for="volume">Master volume</label>
+      <input type="range" min="0" max="1" value=".5" step=".01" id="volume">
+    <section class="inputs">
+      <p>
+        Input
+        <button id="mic">Use mic/input</button>
+      </p>
+      <p>
+        Play song
+        <button id="stop-song" disabled>Stop</button>
+      </p>
+      <button class="song" data-song="1">▶️ Somewhere over...</button>
+      <button class="song" data-song="2">▶️ You make me feel so good (dance)</button>
+    </section>
+    </fieldset>
   </div>
   <canvas id="visualizer"></canvas>
 </body>

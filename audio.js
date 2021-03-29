@@ -1,19 +1,28 @@
 const volume = document.querySelector('#volume');
+const highPass = document.querySelector('#high-pass');
 const bass = document.querySelector('#bass');
 const mid = document.querySelector('#mid');
 const treble = document.querySelector('#treble');
+const lowPass = document.querySelector('#low-pass');
 const compressorThreshold = document.querySelector('#compressor-threshold');
 const compressorRatio = document.querySelector('#compressor-ratio');
 const compressorAttack = document.querySelector('#compressor-attack');
 const compressorRelease = document.querySelector('#compressor-release');
 const delay = document.querySelector('#delay');
 const detune = document.querySelector('#detune');
-const song = document.querySelector('#song');
+const micButton = document.querySelector('#mic');
+const stopSongButton = document.querySelector('#stop-song');
+const songButtons = document.querySelectorAll('.song');
 const visualizer = document.querySelector('#visualizer');
 
 const context = new AudioContext();
 const analyzerNode = new AnalyserNode(context, { fftSize: 256 });
 const gainNode = new GainNode(context, { gain: volume.value });
+const highPassEQ = new BiquadFilterNode(context, {
+  type: 'highpass',
+  Q: Math.SQRT1_2,
+  frequency: highPass.value,
+});
 const bassEQ = new BiquadFilterNode(context, {
   type: 'lowshelf',
   frequency: 500,
@@ -30,6 +39,11 @@ const trebleEQ = new BiquadFilterNode(context, {
   frequency: 3000,
   gain: treble.value,
 });
+const lowPassEQ = new BiquadFilterNode(context, {
+  type: 'lowpass',
+  Q: Math.SQRT1_2,
+  frequency: Math.abs(lowPass.value),
+});
 const compressorNode = new DynamicsCompressorNode(context, {
   threshold: -Math.abs(compressorThreshold.value),
   ratio: compressorRatio.value,
@@ -43,7 +57,6 @@ const delayNode = new DelayNode(context, {
 let songSource;
 
 setupEventListeners()
-setupAudioContext();
 resize();
 drawVisualizer();
 
@@ -53,6 +66,11 @@ function setupEventListeners() {
   volume.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
     gainNode.gain.setTargetAtTime(value, context.currentTime, .01);
+  });
+
+  highPass.addEventListener('input', (event) => {
+    const value = parseInt(event.target.value);
+    highPassEQ.frequency.setTargetAtTime(value, context.currentTime, .01);
   });
 
   bass.addEventListener('input', (event) => {
@@ -68,6 +86,11 @@ function setupEventListeners() {
   treble.addEventListener('input', (event) => {
     const value = parseInt(event.target.value);
     trebleEQ.gain.setTargetAtTime(value, context.currentTime, .01);
+  });
+
+  lowPass.addEventListener('input', (event) => {
+    const value = Math.abs(event.target.value);
+    lowPassEQ.frequency.setTargetAtTime(value, context.currentTime, .01);
   });
 
   compressorThreshold.addEventListener('input', (event) => {
@@ -102,9 +125,16 @@ function setupEventListeners() {
     }
   });
 
-  song.addEventListener('click', async () => {
-    const audioBuffer = await loadSong();
-    setupSongContext(audioBuffer);
+  micButton.addEventListener('click', setupAudioContext);
+
+  stopSongButton.addEventListener('click', stopSong);
+
+  songButtons.forEach((songButton) => {
+    songButton.addEventListener('click', async (event) => {
+      const songIndex = Number(event.currentTarget.dataset.song) - 1;
+      const audioBuffer = await loadSong(songIndex);
+      setupSongContext(audioBuffer, songIndex);
+    });
   });
 }
 
@@ -117,26 +147,41 @@ async function setupAudioContext() {
   connectSource(source);
 }
 
-function setupSongContext(buffer) {
+function setupSongContext(buffer, songIndex) {
+  if (songSource) {
+    songSource.stop();
+  }
   const source = context.createBufferSource();
   source.buffer = buffer;
   source.detune.value = detune.value;
   connectSource(source);
   source.start();
   songSource = source;
-  song.disabled = true;
+  setTimeout(() => {
+    stopSongButton.disabled = false;
+    songButtons[songIndex].classList.add('active');
+  }, 100);
   source.onended = () => {
-    song.disabled = false;
+    songButtons[songIndex].classList.remove('active');
+    stopSongButton.disabled = true;
   };
+}
+
+function stopSong() {
+  if (songSource) {
+    songSource.stop();
+  }
 }
 
 function connectSource(source) {
   source
     .connect(delayNode)
     .connect(compressorNode)
-    .connect(trebleEQ)
-    .connect(midEQ)
+    .connect(highPassEQ)
     .connect(bassEQ)
+    .connect(midEQ)
+    .connect(trebleEQ)
+    .connect(lowPassEQ)
     .connect(gainNode)
     .connect(analyzerNode)
     .connect(context.destination);
@@ -175,13 +220,17 @@ function drawVisualizer() {
 }
 
 function resize() {
-  visualizer.width = visualizer.clientWidth;
-  visualizer.height = visualizer.clientHeight;
+  visualizer.width = visualizer.clientWidth * window.devicePixelRatio;
+  visualizer.height = visualizer.clientHeight * window.devicePixelRatio;
 }
 
-function loadSong() {
-  const url = 'https://upload.wikimedia.org/wikipedia/en/9/92/Israel_Kamakawiwo%27ole_-_Somewhere_Over_The_Rainbow_-_What_A_Wonderful_World.ogg';
-  return fetch(url)
+function loadSong(songIndex) {
+  const urls = [
+    'https://upload.wikimedia.org/wikipedia/en/9/92/Israel_Kamakawiwo%27ole_-_Somewhere_Over_The_Rainbow_-_What_A_Wonderful_World.ogg',
+    './killingfloor00atsoundcloud.mp3',
+  ];
+
+  return fetch(urls[songIndex])
     .then(response => response.arrayBuffer())
     .then(arrayBuffer => context.decodeAudioData(arrayBuffer));
 }
