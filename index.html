@@ -47,7 +47,7 @@
     }
     button.song {
       background: none;
-      border: none;
+      border: 1px solid transparent;
       outline: none;
       cursor: pointer;
       text-align: left;
@@ -56,6 +56,9 @@
     }
     button.song:hover {
       opacity: 1;
+    }
+    button.song:focus {
+      border-bottom: 1px solid gray;
     }
     button.song.active {
       opacity: 1;
