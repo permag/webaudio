@@ -1,4 +1,5 @@
 const volume = document.querySelector('#volume');
+const stereoPan = document.querySelector('#stereo-pan');
 const highPass = document.querySelector('#high-pass');
 const bass = document.querySelector('#bass');
 const mid = document.querySelector('#mid');
@@ -8,19 +9,29 @@ const compressorThreshold = document.querySelector('#compressor-threshold');
 const compressorRatio = document.querySelector('#compressor-ratio');
 const compressorAttack = document.querySelector('#compressor-attack');
 const compressorRelease = document.querySelector('#compressor-release');
-const delay = document.querySelector('#delay');
+const delayTime = document.querySelector('#delay-time');
+const delayGain = document.querySelector('#delay-gain');
+const reverbGain = document.querySelector('#reverb');
 const detune = document.querySelector('#detune');
 const micButton = document.querySelector('#mic');
 const stopSongButton = document.querySelector('#stop-song');
 const songButtons = document.querySelectorAll('.song');
 const visualizer = document.querySelector('#visualizer');
+const waveform = document.querySelector('#waveform');
+const waveformStatic = document.querySelector('#waveform-static');
 
 const context = new (window.AudioContext || window.webkitAudioContext)();
 const analyzerNode = context.createAnalyser();
 analyzerNode.fftSize = 256;
 
+const waveformNode = context.createAnalyser();
+waveformNode.fftSize = 2048;
+
 const gainNode = context.createGain();
 gainNode.gain.value = volume.value;
+
+const stereoPannerNode = context.createStereoPanner();
+stereoPannerNode.pan.value = stereoPan.value;
 
 const highPassEQ = context.createBiquadFilter();
 highPassEQ.type = 'highpass';
@@ -55,7 +66,13 @@ compressorNode.attack.value = compressorAttack.value;
 compressorNode.release.value = compressorRelease.value;
 
 const delayNode = context.createDelay();
-delayNode.delayTime = delay.value;
+delayNode.delayTime = delayTime.value;
+
+const delayGainNode = context.createGain();
+delayGainNode.gain.value = reverbGain.value;
+
+const reverbGainNode = context.createGain();
+reverbGainNode.gain.value = reverbGain.value;
 
 const songBuffers = {};
 let songSource;
@@ -63,13 +80,19 @@ let songSource;
 setupEventListeners()
 resize();
 drawVisualizer();
+drawWaveform();
 
 function setupEventListeners() {
-  window.addEventListener('resize', resize);
+  // window.addEventListener('resize', resize);
 
   volume.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
     gainNode.gain.setTargetAtTime(value, context.currentTime, .01);
+  });
+
+  stereoPan.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    stereoPannerNode.pan.setTargetAtTime(value, context.currentTime, .01);
   });
 
   highPass.addEventListener('input', (event) => {
@@ -117,9 +140,19 @@ function setupEventListeners() {
     compressorNode.release.setTargetAtTime(value, context.currentTime, .01);
   });
 
-  delay.addEventListener('input', (event) => {
+  delayTime.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
     delayNode.delayTime.setTargetAtTime(value, context.currentTime, .01);
+  });
+
+  delayGain.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    delayGainNode.gain.setTargetAtTime(value, context.currentTime, .01);
+  });
+
+  reverbGain.addEventListener('input', (event) => {
+    const value = parseFloat(event.target.value);
+    reverbGainNode.gain.setTargetAtTime(value, context.currentTime, .01);
   });
 
   detune.addEventListener('input', (event) => {
@@ -138,6 +171,7 @@ function setupEventListeners() {
       const songIndex = Number(event.currentTarget.dataset.song) - 1;
       const audioBuffer = await loadSong(songIndex);
       setupSongContext(audioBuffer, songIndex);
+      drawStaticWaveform(audioBuffer)
     });
   });
 }
@@ -179,18 +213,36 @@ function stopSong() {
   }
 }
 
-function connectSource(source) {
-  source
+async function connectSource(source) {
+  const reverb = await createReverb();
+
+  const MIX = context.createGain();
+  MIX.connect(context.destination)
+
+  // Reverb
+  MIX
+    .connect(reverb)
+    .connect(reverbGainNode)
+    .connect(context.destination);
+  // Delay
+  MIX
     .connect(delayNode)
+    .connect(delayGainNode)
+    .connect(context.destination);
+
+  // Effects
+  source
     .connect(compressorNode)
     .connect(highPassEQ)
     .connect(bassEQ)
     .connect(midEQ)
     .connect(trebleEQ)
     .connect(lowPassEQ)
+    .connect(stereoPannerNode)
     .connect(gainNode)
     .connect(analyzerNode)
-    .connect(context.destination);
+    .connect(waveformNode)
+    .connect(MIX);
 }
 
 function getAudio() {
@@ -225,9 +277,78 @@ function drawVisualizer() {
   });
 }
 
+function drawWaveform() {
+  requestAnimationFrame(drawWaveform);
+
+  const bufferLength = waveformNode.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  const width = waveform.width;
+  const height = waveform.height;
+
+  const canvasContext = waveform.getContext('2d');
+  canvasContext.clearRect(0, 0, width, height);
+
+  waveformNode.getByteTimeDomainData(dataArray);
+  canvasContext.fillStyle = 'rgb(0, 0, 0)';
+  canvasContext.fillRect(0, 0, width, height);
+  canvasContext.lineWidth = 2;
+  canvasContext.strokeStyle = 'hotpink';
+  canvasContext.beginPath();
+  const sliceWidth = width * 1.0 / bufferLength;
+  let x = 0;
+  let i;
+  for (i = 0; i < bufferLength; i++) {
+    const v = dataArray[i] / 128.0;
+    const y = v * height / 2;
+    if (i === 0) {
+      canvasContext.moveTo(x, y);
+    } else {
+      canvasContext.lineTo(x, y);
+    }
+    x += sliceWidth;
+  }
+  canvasContext.lineTo(waveform.width, waveform.height / 2);
+  canvasContext.stroke();
+}
+
+function drawStaticWaveform(buffer) {
+  const width = waveformStatic.width;
+  const height = waveformStatic.height;
+  const canvasContext = waveformStatic.getContext('2d');
+  canvasContext.clearRect(0, 0, width, height);
+
+  const data = buffer.getChannelData(0);
+  const step = Math.ceil(data.length / width);
+  const amp = height / 2;
+  let i;
+  for (i = 0; i < width; i++) {
+    let min = 1.0;
+    let max = -1.0;
+    let j;
+    for (j = 0; j < step; j++) {
+      const d = data[(i * step) + j];
+      if (d < min) {
+        min = d;
+      }
+      if (d > max) {
+        max = d;
+      }
+    }
+    canvasContext.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+  }
+}
+
 function resize() {
   visualizer.width = visualizer.clientWidth * window.devicePixelRatio;
   visualizer.height = visualizer.clientHeight * window.devicePixelRatio;
+}
+
+async function createReverb() {
+  const convolver = context.createConvolver();
+  const response = await fetch('./impulse.wav');
+  const arraybuffer = await response.arrayBuffer();
+  convolver.buffer = await context.decodeAudioData(arraybuffer);
+  return convolver;
 }
 
 function loadSong(songIndex) {

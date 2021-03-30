@@ -17,7 +17,7 @@
       justify-items: stretch;
       gap: 6px 12px;
     }
-    canvas {
+    canvas#visualizer-absolute {
       position: absolute;
       top: 0;
       left: 0;
@@ -25,6 +25,17 @@
       height: 100vh;
       z-index: -1;
       pointer-events: none;
+    }
+    canvas#visualizer {
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: black;
+    }
+    canvas.waveforms {
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, .5);
     }
     fieldset {
       display: flex;
@@ -95,9 +106,13 @@
     </fieldset>
 
     <fieldset>
-      <legend>Delay</legend>
-      <label for="delay">Delay</label>
-      <input type="range" min="0" max="1" value="0" step=".01" id="delay">
+      <legend>Sends</legend>
+      <label for="delay-time">Delay time</label>
+      <input type="range" min="0" max="1" value="0" step=".01" id="delay-time">
+      <label for="delay-gain">Delay gain</label>
+      <input type="range" min="0" max="1" value="0" step=".01" id="delay-gain">
+      <label for="reverb">Reverb</label>
+      <input type="range" min="0" max="1" value="0" step=".01" id="reverb">
     </fieldset>
 
     <fieldset>
@@ -105,10 +120,13 @@
       <label for="detune">Detune</label>
       <input type="range" min="-1000" max="1000" value="0" step="100" id="detune">
     </fieldset>
+
     <fieldset>
       <legend>I/O</legend>
-      <label for="volume">Master volume</label>
+      <label for="volume">Master gain</label>
       <input type="range" min="0" max="1" value=".5" step=".01" id="volume">
+      <label for="stereo-pan">Stereo panner</label>
+      <input type="range" min="-1" max="1" value="0" step=".1" id="stereo-pan">
       <section class="inputs">
         <p>
           Input
@@ -122,7 +140,14 @@
         <button class="song" data-song="2">▶️ You make me feel so good (dance)</button>
       </section>
     </fieldset>
+
+    <fieldset>
+      <legend>Visualizers</legend>
+      <canvas id="waveform" class="waveforms"></canvas>
+      <canvas id="waveform-static" class="waveforms"></canvas>
+      <canvas id="visualizer"></canvas>
+    </fieldset>
   </div>
-  <canvas id="visualizer"></canvas>
+  <canvas id="visualizer-absolute"></canvas>
 </body>
 </html>
