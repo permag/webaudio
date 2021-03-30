@@ -57,6 +57,7 @@ compressorNode.release.value = compressorRelease.value;
 const delayNode = context.createDelay();
 delayNode.delayTime = delay.value;
 
+const songBuffers = {};
 let songSource;
 
 setupEventListeners()
@@ -234,8 +235,20 @@ function loadSong(songIndex) {
     'https://upload.wikimedia.org/wikipedia/en/9/92/Israel_Kamakawiwo%27ole_-_Somewhere_Over_The_Rainbow_-_What_A_Wonderful_World.ogg',
     './killingfloor00atsoundcloud.mp3',
   ];
-
-  return fetch(urls[songIndex])
+  const url = urls[songIndex];
+  if (songBuffers[url]) {
+    return Promise.resolve(songBuffers[url]);
+  }
+  return fetch(url)
     .then(response => response.arrayBuffer())
-    .then(arrayBuffer => context.decodeAudioData(arrayBuffer));
+    .then(arrayBuffer =>
+      context.decodeAudioData(
+        arrayBuffer,
+        (buffer) => Promise.resolve(buffer)
+      )
+    )
+    .then(audioBuffer => {
+      songBuffers[url] = audioBuffer;
+      return audioBuffer;
+    });
 }
