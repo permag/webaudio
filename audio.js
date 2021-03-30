@@ -15,44 +15,47 @@ const stopSongButton = document.querySelector('#stop-song');
 const songButtons = document.querySelectorAll('.song');
 const visualizer = document.querySelector('#visualizer');
 
-const context = new AudioContext();
-const analyzerNode = new AnalyserNode(context, { fftSize: 256 });
-const gainNode = new GainNode(context, { gain: volume.value });
-const highPassEQ = new BiquadFilterNode(context, {
-  type: 'highpass',
-  Q: Math.SQRT1_2,
-  frequency: highPass.value,
-});
-const bassEQ = new BiquadFilterNode(context, {
-  type: 'lowshelf',
-  frequency: 500,
-  gain: bass.value,
-});
-const midEQ = new BiquadFilterNode(context, {
-  type: 'peaking',
-  Q: Math.SQRT1_2,
-  frequency: 1500,
-  gain: mid.value,
-});
-const trebleEQ = new BiquadFilterNode(context, {
-  type: 'highshelf',
-  frequency: 3000,
-  gain: treble.value,
-});
-const lowPassEQ = new BiquadFilterNode(context, {
-  type: 'lowpass',
-  Q: Math.SQRT1_2,
-  frequency: Math.abs(lowPass.value),
-});
-const compressorNode = new DynamicsCompressorNode(context, {
-  threshold: -Math.abs(compressorThreshold.value),
-  ratio: compressorRatio.value,
-  attack: compressorAttack.value,
-  release: compressorRelease.value,
-});
-const delayNode = new DelayNode(context, {
-  delayTime: delay.value,
-});
+const context = new (window.AudioContext || window.webkitAudioContext)();
+const analyzerNode = context.createAnalyser();
+analyzerNode.fftSize = 256;
+
+const gainNode = context.createGain();
+gainNode.gain.value = volume.value;
+
+const highPassEQ = context.createBiquadFilter();
+highPassEQ.type = 'highpass';
+highPassEQ.Q.value = Math.SQRT1_2;
+highPassEQ.frequency.value = highPass.value;
+
+const bassEQ = context.createBiquadFilter();
+bassEQ.type = 'lowshelf';
+bassEQ.frequency.value = 500;
+bassEQ.gain.value = bass.value;
+
+const midEQ = context.createBiquadFilter();
+midEQ.type = 'peaking';
+midEQ.Q.value = Math.SQRT1_2;
+midEQ.frequency.value = 1500;
+midEQ.gain.value = mid.value;
+
+const trebleEQ = context.createBiquadFilter();
+trebleEQ.type = 'highshelf';
+trebleEQ.frequency.value = 3000;
+trebleEQ.gain.value = treble.value;
+
+const lowPassEQ = context.createBiquadFilter();
+lowPassEQ.type = 'lowpass';
+lowPassEQ.Q.value = Math.SQRT1_2;
+lowPassEQ.frequency.value = Math.abs(lowPass.value);
+
+const compressorNode = context.createDynamicsCompressor();
+compressorNode.threshold.value = -Math.abs(compressorThreshold.value);
+compressorNode.ratio.value = compressorRatio.value;
+compressorNode.attack.value = compressorAttack.value;
+compressorNode.release.value = compressorRelease.value;
+
+const delayNode = context.createDelay();
+delayNode.delayTime = delay.value;
 
 let songSource;
 
@@ -153,7 +156,9 @@ function setupSongContext(buffer, songIndex) {
   }
   const source = context.createBufferSource();
   source.buffer = buffer;
-  source.detune.value = detune.value;
+  if (source.detune) {
+    source.detune.value = detune.value;
+  }
   connectSource(source);
   source.start();
   songSource = source;
