@@ -69,7 +69,7 @@ const delayNode = context.createDelay();
 delayNode.delayTime = delayTime.value;
 
 const delayGainNode = context.createGain();
-delayGainNode.gain.value = reverbGain.value;
+delayGainNode.gain.value = delayGain.value;
 
 const reverbGainNode = context.createGain();
 reverbGainNode.gain.value = reverbGain.value;
@@ -343,11 +343,30 @@ function resize() {
   visualizer.height = visualizer.clientHeight * window.devicePixelRatio;
 }
 
-async function createReverb() {
+function createImpulseResponse(duration = 2.0, decay = 2.0, reverse = false) {
+  const sampleRate = context.sampleRate;
+  const length = sampleRate * duration;
+  const impulseBuffer = context.createBuffer(2, length, sampleRate);
+  const impulseL = impulseBuffer.getChannelData(0);
+  const impulseR = impulseBuffer.getChannelData(1);
+  let i;
+  for (i = 0; i < length; i++) {
+    const n = reverse ? length - i : i;
+    impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+    impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+  }
+  return impulseBuffer;
+}
+
+async function createReverb(useSample = true) {
   const convolver = context.createConvolver();
-  const response = await fetch('./impulse.wav');
-  const arraybuffer = await response.arrayBuffer();
-  convolver.buffer = await context.decodeAudioData(arraybuffer);
+  if (useSample) {
+    const response = await fetch('./impulse_hall.wav');
+    const arraybuffer = await response.arrayBuffer();
+    convolver.buffer = await context.decodeAudioData(arraybuffer);
+  } else {
+    convolver.buffer = createImpulseResponse(10, 10);
+  }
   return convolver;
 }
 
