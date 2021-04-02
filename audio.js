@@ -22,7 +22,7 @@ const waveformStatic = document.querySelector('#waveform-static');
 
 const context = new (window.AudioContext || window.webkitAudioContext)();
 const analyzerNode = context.createAnalyser();
-analyzerNode.fftSize = 256;
+analyzerNode.fftSize = 64;
 
 const waveformNode = context.createAnalyser();
 waveformNode.fftSize = 2048;
@@ -83,8 +83,6 @@ drawVisualizer();
 drawWaveform();
 
 function setupEventListeners() {
-  // window.addEventListener('resize', resize);
-
   volume.addEventListener('input', (event) => {
     const value = parseFloat(event.target.value);
     gainNode.gain.setTargetAtTime(value, context.currentTime, .01);
@@ -339,8 +337,13 @@ function drawStaticWaveform(buffer) {
 }
 
 function resize() {
-  visualizer.width = visualizer.clientWidth * window.devicePixelRatio;
-  visualizer.height = visualizer.clientHeight * window.devicePixelRatio;
+  const updateSize = (element) => {
+    element.width = element.clientWidth * window.devicePixelRatio;
+    element.height = element.clientHeight * window.devicePixelRatio;
+  };
+  updateSize(visualizer);
+  updateSize(waveform);
+  updateSize(waveformStatic);
 }
 
 function createImpulseResponse(duration = 2.0, decay = 2.0, reverse = false) {
